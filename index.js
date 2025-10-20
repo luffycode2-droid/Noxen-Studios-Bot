@@ -1,7 +1,7 @@
 // index.js
-const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
-const OpenAI = require('openai');
-const express = require('express');
+const { Client, GatewayIntentBits, Partials, Events } = require("discord.js");
+const OpenAI = require("openai");
+const express = require("express");
 
 // Inicializa cliente Discord
 const client = new Client({
@@ -15,35 +15,47 @@ const client = new Client({
 });
 
 // Inicializa OpenAI
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-// Servidor web para manter bot online
+// Servidor web (mantém o bot ativo no Render)
 const app = express();
-app.get('/', (req, res) => res.send('Bot da Noxen Studios online!'));
+app.get("/", (req, res) => res.send("🤖 Bot da Noxen Studios online!"));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor web rodando na porta ${PORT}...`));
 
-// Evento quando bot ficar online
-client.on(Events.ClientReady, () => {
-  console.log(`Bot online como ${client.user.tag}`);
+// Quando o bot estiver pronto
+client.once(Events.ClientReady, () => {
+  console.log(`✅ Bot online como ${client.user.tag}`);
 });
 
-// Responde DMs
+// Quando o bot receber mensagem
 client.on(Events.MessageCreate, async (message) => {
+  // Evita responder a outros bots (inclusive ele mesmo)
   if (message.author.bot) return;
 
-  if (message.channel.type === 1) { // DM
+  // Só responde mensagens privadas (DM)
+  if (message.channel.type === 1) {
     try {
-      const response = await openai.chat.completions.create({
+      console.log(`💬 Mensagem recebida de ${message.author.tag}: ${message.content}`);
+
+      // Gera resposta com OpenAI
+      const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        messages: [{ role: "user", content: message.content }]
+        messages: [
+          { role: "system", content: "Você é o assistente oficial da Noxen Studios. Responda de forma simpática, criativa e profissional." },
+          { role: "user", content: message.content }
+        ],
       });
 
-      const botReply = response.choices[0].message.content;
-      await message.channel.send(botReply);
+      const resposta = completion.choices[0].message.content;
+      console.log(`🤖 Resposta gerada: ${resposta}`);
+
+      await message.channel.send(resposta);
     } catch (err) {
-      console.error('Erro ao gerar resposta:', err);
-      await message.channel.send('Desculpe, ocorreu um erro ao processar sua mensagem.');
+      console.error("❌ Erro ao processar mensagem:", err.message);
+      // NÃO enviar mensagem de erro para o usuário → evita loop
     }
   }
 });
