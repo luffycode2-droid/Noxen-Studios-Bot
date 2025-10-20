@@ -3,7 +3,7 @@ const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
 const OpenAI = require('openai');
 const express = require('express');
 
-// Configurações do bot
+// Inicializa cliente Discord
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -17,19 +17,20 @@ const client = new Client({
 // Inicializa OpenAI
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Servidor web para manter bot online 24/7
+// Servidor web para manter bot online
 const app = express();
 app.get('/', (req, res) => res.send('Bot da Noxen Studios online!'));
-app.listen(3000, () => console.log('Servidor web rodando...'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Servidor web rodando na porta ${PORT}...`));
 
-// Evento quando o bot ficar online
+// Evento quando bot ficar online
 client.on(Events.ClientReady, () => {
   console.log(`Bot online como ${client.user.tag}`);
 });
 
-// Evento para responder DMs
+// Responde DMs
 client.on(Events.MessageCreate, async (message) => {
-  if (message.author.bot) return; // ignora mensagens do próprio bot
+  if (message.author.bot) return;
 
   if (message.channel.type === 1) { // DM
     try {
