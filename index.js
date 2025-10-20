@@ -1,17 +1,16 @@
-// index.js
-const { Client, GatewayIntentBits, Partials, Events } = require("discord.js");
+const { Client, GatewayIntentBits, Partials, Events, ChannelType } = require("discord.js");
 const OpenAI = require("openai");
 const express = require("express");
 
-// Inicializa cliente Discord
+// Inicializa o cliente Discord
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
+    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages
+    GatewayIntentBits.Guilds,
   ],
-  partials: [Partials.Channel]
+  partials: [Partials.Channel],
 });
 
 // Inicializa OpenAI
@@ -19,44 +18,55 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Servidor web (mantém o bot ativo no Render)
+// Servidor web para manter o bot ativo (Render)
 const app = express();
-app.get("/", (req, res) => res.send("🤖 Bot da Noxen Studios online!"));
+app.get("/", (req, res) => res.send("🤖 Bot Noxen Studios online e pronto!"));
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor web rodando na porta ${PORT}...`));
 
-// Quando o bot estiver pronto
+// Armazena IDs de mensagens já respondidas para evitar duplicação
+const respondedMessages = new Set();
+
+// Evento: quando o bot fica online
 client.once(Events.ClientReady, () => {
   console.log(`✅ Bot online como ${client.user.tag}`);
 });
 
-// Quando o bot receber mensagem
+// Evento: ao receber mensagem
 client.on(Events.MessageCreate, async (message) => {
-  // Evita responder a outros bots (inclusive ele mesmo)
-  if (message.author.bot) return;
+  try {
+    // Ignora mensagens de bots (incluindo ele mesmo)
+    if (message.author.bot) return;
 
-  // Só responde mensagens privadas (DM)
-  if (message.channel.type === 1) {
-    try {
-      console.log(`💬 Mensagem recebida de ${message.author.tag}: ${message.content}`);
+    // Só responde DMs
+    if (message.channel.type !== ChannelType.DM) return;
 
-      // Gera resposta com OpenAI
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "Você é o assistente oficial da Noxen Studios. Responda de forma simpática, criativa e profissional." },
-          { role: "user", content: message.content }
-        ],
-      });
+    // Evita responder a mesma mensagem mais de uma vez
+    if (respondedMessages.has(message.id)) return;
+    respondedMessages.add(message.id);
 
-      const resposta = completion.choices[0].message.content;
-      console.log(`🤖 Resposta gerada: ${resposta}`);
+    console.log(`💬 [DM de ${message.author.tag}] ${message.content}`);
 
-      await message.channel.send(resposta);
-    } catch (err) {
-      console.error("❌ Erro ao processar mensagem:", err.message);
-      // NÃO enviar mensagem de erro para o usuário → evita loop
-    }
+    // Chamada OpenAI
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Você é o assistente oficial da Noxen Studios, uma empresa criativa e moderna. Responda de forma simpática, profissional e clara.",
+        },
+        { role: "user", content: message.content },
+      ],
+    });
+
+    const resposta = completion.choices[0].message.content.trim();
+    console.log(`🤖 Resposta: ${resposta}`);
+
+    // Envia resposta
+    await message.channel.send(resposta);
+  } catch (err) {
+    console.error("❌ Erro ao responder:", err);
   }
 });
 
