@@ -1,0 +1,17 @@
+{
+  "name": "noxen-studios-bot",
+  "version": "1.0.0",
+  "description": "Bot da Noxen Studios com IA",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^15.0.0",
+    "openai": "^4.8.0",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
